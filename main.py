@@ -1,7 +1,15 @@
 import numpy as np
 from functions import *
 from parameters import *
-# from functions_optimised import *
+
+
+# This solves the phenotype-structured SKT system in 
+# [CGL2026] On a phenotype-structured Shigesada–Kawasaki–Teramoto model: 
+# Turing instability and pattern selection under fast phenotype switching
+# by Cusseddu, Gambino, Lorenzi, 2026 https://arxiv.org/pdf/2605.28976
+
+# Here the phenotype densities n1(t,x,y) and n2(t,x,y) in [CGL2026]
+# are defined by U1 and U2
 
 print('All parameters have been imported... \n The simulation is starting')
 
@@ -27,8 +35,8 @@ while adaptive_steps <= max_adaptive_steps and t < T:
 
         # Ns is defined in the parameters file
         
-        # DEFINISCO LE MAPPE DI INDICI
-        ijk2n_map = index_n(Ns)                 # DALLA TRIPLETTA (i,j,k) AL SINGOLO n
+        # Define the index map: from the triplet (i,j,k) to a single index n
+        ijk2n_map = index_n(Ns)                 
 
         if dimensions == 2:
             Nx, Nz = Ns[:-1]
@@ -60,17 +68,17 @@ while adaptive_steps <= max_adaptive_steps and t < T:
 
     store_refinement_data(dt, Ns, t, adaptive_steps, output_folder)
 
-    dx = x[1] - x[0]                    # DISCRETISATION STEP
+    dx = x[1] - x[0]                    # spatial discretisation step 
     dz = z[1] - z[0]
     
     if dimensions == 2:
         discretisation_steps = evaluate_discretisation_steps([dt, dx, dz])
     elif dimensions == 3:
-        dy = y[1] - y[0]                # DISCRETISATION STEP
+        dy = y[1] - y[0]                # phenotype discretisation step
         discretisation_steps = evaluate_discretisation_steps([dt, dx, dy, dz])
         
 
-    n2ijk_map = indices_ijk(Ns)             # DAL SINGOLO n ALLA TRIPLETTA (i,j,k)
+    n2ijk_map = indices_ijk(Ns)             # Define the inverse index map: from the single index n to the triplet (i,j,k)
     D_and_alpha_functions, betaK11, betaK12, betaK21, betaK22, M1, M2 = evaluate_kernels_and_functions(z, diffusion_parameter_list, beta_pars, K_kernel_choices, M_pars)
     
     D1 = D_and_alpha_functions[0]
@@ -87,8 +95,6 @@ while adaptive_steps <= max_adaptive_steps and t < T:
         print("\n Starting the simulation: \n")
         
         # SETTING THE INITIAL CONDITION AND EXPORT IT TO FILE
-        #U1_0, U2_0 = initial_condition(U1_star, U2_star, Ns, ijk2n_map, M1, M2)
-        #U1_0, U2_0 = add_perturbation(U1_0, U2_0, max_perturbation1, max_perturbation2)
 
         U1_star, U2_star = steady_state(r1, r2, weighted_competition_coefficients, beta_pars)
 
@@ -103,9 +109,12 @@ while adaptive_steps <= max_adaptive_steps and t < T:
         plot_system_functions(z, D1, alpha11, alpha12, D2, alpha21, alpha22, M1, M2, output_folder)
 
     
-    # I START ASSEMBLYING THE FINITE DIFFERENCE SYSTEM
-    # THE SCHEME IS 100% IMPLICIT. THEREFORE IT TAKES THE FORM A1 U1^{n} = U1^{n-1} AND   A2 U2^{n} = U2^{n-1}
-
+    # I START ASSEMBLING THE FINITE DIFFERENCE SYSTEM
+    # THE SCHEME IS IMPLICIT IN TIME. THEREFORE IT TAKES THE FORM A1 U1^{n} = U1^{n-1} AND   A2 U2^{n} = U2^{n-1}
+    # The linear diffusion, growth, and phenotype-switching terms are assembled
+    # in A1_fixed and A2_fixed. The nonlinear cross-diffusion and competition terms
+    # are evaluated at the current Picard iterate and added through A1_p/A2_p.
+    
     # MATRICES OF THE COEFFICIENTS
     A1_fixed, A2_fixed = assembly_fixed_matrices(Ns, discretisation_steps, D1, r1, D2, r2, M1, theta1, M2, theta2, ijk2n_map)
     
@@ -114,11 +123,11 @@ while adaptive_steps <= max_adaptive_steps and t < T:
     while t <= T and refinement == adaptive_steps:
         
         picard_iter = 0
-        Up1 = U1_n.copy()
-        Up2 = U2_n.copy()
+        
+        Up1 = U1_n.copy() # Picard iterate for U1 
+        Up2 = U2_n.copy() # Picard iterate for U2
         
         while picard_iter == 0 or ( (np.linalg.norm(Up1-U1)/max(np.linalg.norm(Up1),1e-12) > picard_tol or np.linalg.norm(Up2-U2)/max(np.linalg.norm(Up2),1e-12) > picard_tol) and picard_iter < picard_max_iter):
-        #while (np.linalg.norm(Up1-U1) > picard_tol or np.linalg.norm(Up2-U2) > picard_tol) and picard_iter < picard_max_iter:
 
             if picard_iter > 0:
                 Up1 = U1.copy()
