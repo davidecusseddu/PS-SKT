@@ -99,10 +99,10 @@ elif numerical_example == '3A' or numerical_example == '3B':
     beta_pars = [75.721873, 52.211524, 2.403204, 8.016032]         # values for [beta11, beta12, beta21, beta22]
 
     # Phenotype switching kernels
-    if numerical_example == '1A': 
+    if numerical_example == '3A': 
         M1_pars = [0.25, 0.002, 0.5, 0.002, 0.50]
         M2_pars = [0.35, 0.002]
-    elif numerical_example == '1B':      
+    elif numerical_example == '3B':      
         M1_pars = [0.25, 0.002, 0.5, 0.002, 0.35]
         M2_pars = [0.50, 0.002]
 
